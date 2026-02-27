@@ -4,50 +4,93 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ link.description or link.slug }}</title>
+    <link rel="icon" type="image/png" href="/static/icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { -webkit-font-smoothing: antialiased; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-            display: flex; justify-content: center; align-items: center;
-            min-height: 100vh; background: #fafafa; color: #333;
+            font-family: 'Source Serif 4', Georgia, serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0b0e14;
+            background-image: radial-gradient(ellipse at center, rgba(212, 148, 63, 0.05) 0%, transparent 55%);
+            color: #e6e1d6;
         }
-        .wrap { text-align: center; padding: 2rem; }
-        p { font-size: 1rem; margin-bottom: .5rem; }
-        a { color: #555; }
+        .landing {
+            text-align: center;
+            padding: 2rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+        .pin {
+            width: 40px;
+            height: 40px;
+            filter: invert(1) drop-shadow(0 0 18px rgba(212, 148, 63, 0.3));
+            opacity: 0.7;
+            margin-bottom: 1.5rem;
+            animation: float 3s ease-in-out infinite;
+        }
+        .message {
+            font-size: 1.1rem;
+            color: #918f88;
+            max-width: 360px;
+            line-height: 1.7;
+        }
+        .continue {
+            display: inline-block;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: #d4943f;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .continue:hover { color: #e8ad5c; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
     </style>
 </head>
 <body>
-    <div class="wrap">
-        <p>{{ link.description or "Thanks for visiting!" }}</p>
+    <div class="landing">
+        <img src="/static/icon.png" alt="" class="pin">
+        <p class="message">{{ link.description or "Thanks for visiting!" }}</p>
         {% if link.target_url %}
-        <p><a href="{{ link.target_url }}">Continue &rarr;</a></p>
+        <a href="{{ link.target_url }}" class="continue">Continue &rarr;</a>
         {% endif %}
     </div>
 
     <script>
-        (function () {
-            var scanId = {{ scan_id | tojson }};
-            var slug = {{ link.slug | tojson }};
-
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    function (pos) {
-                        fetch("/t/" + slug + "/geo", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                scan_id: scanId,
-                                lat: pos.coords.latitude,
-                                lng: pos.coords.longitude,
-                                accuracy: pos.coords.accuracy
-                            })
-                        });
-                    },
-                    function () { /* denied or error — IP geo still logged */ },
-                    { enableHighAccuracy: true, timeout: 10000 }
-                );
-            }
-        })();
+    (function () {
+        var scanId = {{ scan_id | tojson }};
+        var slug = {{ link.slug | tojson }};
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                function (pos) {
+                    fetch("/t/" + slug + "/geo", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            scan_id: scanId,
+                            lat: pos.coords.latitude,
+                            lng: pos.coords.longitude,
+                            accuracy: pos.coords.accuracy
+                        })
+                    });
+                },
+                function () {},
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+    })();
     </script>
 </body>
 </html>

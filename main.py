@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, relationship, Session
@@ -116,6 +117,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Link Tracker", lifespan=lifespan)
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
+app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
 
 
 def get_db():
