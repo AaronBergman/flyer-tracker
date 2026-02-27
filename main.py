@@ -17,17 +17,29 @@ import httpx
 # Config
 # ---------------------------------------------------------------------------
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://localhost:5432/flyer_tracker")
-# Railway historically used postgres:// but SQLAlchemy needs postgresql://
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("DATABASE_PRIVATE_URL") or os.environ.get("DATABASE_PUBLIC_URL") or ""
+
+if DATABASE_URL:
+    # Railway historically used postgres:// but SQLAlchemy needs postgresql://
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+else:
+    DATABASE_URL = ""
+
+# Log what we're working with on startup (mask credentials)
+if DATABASE_URL:
+    _masked = DATABASE_URL.split("@")[-1] if "@" in DATABASE_URL else DATABASE_URL
+    print(f"DATABASE_URL found, connecting to: ...@{_masked}")
+else:
+    print("WARNING: No DATABASE_URL found in environment!")
+    print(f"  Available env vars: {[k for k in os.environ if 'DATABASE' in k.upper() or 'PG' in k.upper() or 'POSTGRES' in k.upper()]}")
 
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
-SessionLocal = sessionmaker(bind=engine)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True) if DATABASE_URL else None
+SessionLocal = sessionmaker(bind=engine) if engine else None
 
 
 class Base(DeclarativeBase):
@@ -88,14 +100,17 @@ _tables_created = False
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Try to create tables, but don't crash if DB isn't ready yet
     global _tables_created
-    try:
-        Base.metadata.create_all(bind=engine)
-        _tables_created = True
-    except Exception as e:
-        print(f"WARNING: Could not create tables on startup: {e}")
-        print("Tables will be created on first request.")
+    if engine:
+        try:
+            Base.metadata.create_all(bind=engine)
+            _tables_created = True
+            print("Database tables created successfully.")
+        except Exception as e:
+            print(f"WARNING: Could not create tables on startup: {e}")
+            print("Tables will be created on first request.")
+    else:
+        print("No database configured. Set DATABASE_URL env var.")
     yield
 
 
@@ -104,8 +119,10 @@ templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "t
 
 
 def get_db():
+    if not SessionLocal:
+        raise Exception("No database configured")
     global _tables_created
-    if not _tables_created:
+    if not _tables_created and engine:
         try:
             Base.metadata.create_all(bind=engine)
             _tables_created = True
@@ -159,6 +176,35 @@ def generate_slug(length: int = 8) -> str:
     """Generate a short random slug for auto-created links."""
     alphabet = string.ascii_lowercase + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+# ---------------------------------------------------------------------------
+# Routes — Diagnostics
+# ---------------------------------------------------------------------------
+
+@app.get("/health")
+async def health():
+    """Check DB connection and show env var diagnostics."""
+    db_vars = {k: "***" for k in os.environ if "DATABASE" in k.upper() or "PG" in k.upper() or "POSTGRES" in k.upper()}
+    info = {
+        "database_url_set": bool(DATABASE_URL),
+        "database_url_host": DATABASE_URL.split("@")[-1].split("/")[0] if DATABASE_URL and "@" in DATABASE_URL else "not set",
+        "env_vars_found": db_vars,
+        "engine_created": engine is not None,
+    }
+    if engine:
+        try:
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            info["db_connected"] = True
+        except Exception as e:
+            info["db_connected"] = False
+            info["db_error"] = str(e)
+    else:
+        info["db_connected"] = False
+        info["db_error"] = "No engine — DATABASE_URL not set"
+    return JSONResponse(info)
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +272,30 @@ async def receive_browser_geo(slug: str, request: Request, db: Session = Depends
 
 @app.get("/", response_class=HTMLResponse)
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request, db: Session = Depends(get_db)):
+async def dashboard(request: Request):
+    if not SessionLocal:
+        db_vars = [k for k in os.environ if "DATABASE" in k.upper() or "PG" in k.upper()]
+        return HTMLResponse(
+            f"<h1>Database not configured</h1>"
+            f"<p>Set <code>DATABASE_URL</code> environment variable.</p>"
+            f"<p>DB-related env vars found: <code>{db_vars}</code></p>"
+            f"<p>Check <a href='/health'>/health</a> for details.</p>",
+            status_code=503,
+        )
+    db = SessionLocal()
+    try:
+        return await _dashboard_inner(request, db)
+    except Exception as e:
+        return HTMLResponse(
+            f"<h1>Database connection error</h1>"
+            f"<p>{type(e).__name__}: check <a href='/health'>/health</a> for details.</p>",
+            status_code=503,
+        )
+    finally:
+        db.close()
+
+
+async def _dashboard_inner(request: Request, db: Session):
     links = db.query(Link).order_by(Link.created_at.desc()).all()
 
     scan_counts = {}
