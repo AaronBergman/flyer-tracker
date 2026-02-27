@@ -83,9 +83,19 @@ class Scan(Base):
 # App setup
 # ---------------------------------------------------------------------------
 
+_tables_created = False
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    # Try to create tables, but don't crash if DB isn't ready yet
+    global _tables_created
+    try:
+        Base.metadata.create_all(bind=engine)
+        _tables_created = True
+    except Exception as e:
+        print(f"WARNING: Could not create tables on startup: {e}")
+        print("Tables will be created on first request.")
     yield
 
 
@@ -94,6 +104,13 @@ templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "t
 
 
 def get_db():
+    global _tables_created
+    if not _tables_created:
+        try:
+            Base.metadata.create_all(bind=engine)
+            _tables_created = True
+        except Exception:
+            pass
     db = SessionLocal()
     try:
         yield db
