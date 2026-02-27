@@ -166,6 +166,28 @@ async def geolocate_ip(ip: str) -> dict:
     return {}
 
 
+async def reverse_geocode(lat: float, lng: float) -> dict:
+    """Reverse geocode via Nominatim (OpenStreetMap). Free, no key needed."""
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            resp = await client.get(
+                "https://nominatim.openstreetmap.org/reverse",
+                params={"lat": lat, "lon": lng, "format": "json", "zoom": 14},
+                headers={"User-Agent": "LinkTracker/1.0"},
+            )
+            data = resp.json()
+            addr = data.get("address", {})
+            city = (addr.get("city") or addr.get("town") or addr.get("village")
+                    or addr.get("suburb") or addr.get("hamlet") or "")
+            return {
+                "city": city,
+                "region": addr.get("state", ""),
+                "country": addr.get("country", ""),
+            }
+    except Exception:
+        return {}
+
+
 def get_client_ip(request: Request) -> str:
     """Extract client IP, respecting proxy headers (Railway runs behind a proxy)."""
     forwarded = request.headers.get("x-forwarded-for")
@@ -264,6 +286,15 @@ async def receive_browser_geo(slug: str, request: Request, db: Session = Depends
             scan.browser_lat = data.get("lat")
             scan.browser_lng = data.get("lng")
             scan.browser_accuracy = data.get("accuracy")
+            # Reverse-geocode GPS coords for accurate city name
+            if scan.browser_lat and scan.browser_lng:
+                geo = await reverse_geocode(scan.browser_lat, scan.browser_lng)
+                if geo.get("city"):
+                    scan.ip_city = geo["city"]
+                if geo.get("region"):
+                    scan.ip_region = geo["region"]
+                if geo.get("country"):
+                    scan.ip_country = geo["country"]
             db.commit()
     return JSONResponse({"ok": True})
 
