@@ -30,7 +30,14 @@
         <h1 class="slug-title">{{ link.slug }}</h1>
         <div class="meta">
             {% if link.description %}<p><strong>Description:</strong> {{ link.description }}</p>{% endif %}
-            <p><strong>Tracking URL:</strong> <code>{{ base_url }}/t/{{ link.slug }}</code></p>
+            <div class="url-row">
+                <strong>Tracking URL:</strong>
+                <code>{{ base_url }}/t/{{ link.slug }}</code>
+                <span class="link-actions">
+                    <button class="icon-btn" id="copy-url-btn" title="Copy URL">&#x2398;</button>
+                    <a class="icon-btn" href="{{ base_url }}/t/{{ link.slug }}" target="_blank" rel="noopener" title="Open in new tab">&#x2197;</a>
+                </span>
+            </div>
         </div>
     </div>
 
@@ -172,6 +179,20 @@ if (deleteBtn) {
         } else {
             alert("Failed to delete.");
         }
+    });
+}
+
+var copyBtn = document.getElementById("copy-url-btn");
+if (copyBtn) {
+    copyBtn.addEventListener("click", function () {
+        navigator.clipboard.writeText({{ (base_url ~ "/t/" ~ link.slug) | tojson }}).then(function () {
+            copyBtn.classList.add("copied");
+            copyBtn.innerHTML = "&#x2713;";
+            setTimeout(function () {
+                copyBtn.classList.remove("copied");
+                copyBtn.innerHTML = "&#x2398;";
+            }, 1500);
+        });
     });
 }
 </script>

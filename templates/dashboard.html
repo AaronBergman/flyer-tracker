@@ -59,6 +59,7 @@
                         <th>Description</th>
                         <th>Scans</th>
                         <th>Created</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -74,6 +75,12 @@
                             </span>
                         </td>
                         <td>{{ link.created_at.strftime('%b %d, %Y') }}</td>
+                        <td>
+                            <span class="link-actions">
+                                <button class="icon-btn copy-btn" data-url="{{ base_url }}/t/{{ link.slug }}" title="Copy tracking URL">&#x2398;</button>
+                                <a class="icon-btn" href="{{ base_url }}/t/{{ link.slug }}" target="_blank" rel="noopener" title="Open in new tab">&#x2197;</a>
+                            </span>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -130,6 +137,20 @@
             resultEl.innerHTML =
                 "<p>" + (json.error || "Something went wrong") + "</p>";
         }
+    });
+
+    document.querySelectorAll(".copy-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            var url = btn.getAttribute("data-url");
+            navigator.clipboard.writeText(url).then(function () {
+                btn.classList.add("copied");
+                btn.innerHTML = "&#x2713;";
+                setTimeout(function () {
+                    btn.classList.remove("copied");
+                    btn.innerHTML = "&#x2398;";
+                }, 1500);
+            });
+        });
     });
 </script>
 
