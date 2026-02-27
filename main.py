@@ -378,6 +378,9 @@ async def link_detail(slug: str, request: Request, db: Session = Depends(get_db)
             cities.add(scan.ip_city)
 
     base_url = str(request.base_url).rstrip("/")
+    # Railway terminates SSL at the proxy, so force https for display URLs
+    if base_url.startswith("http://") and "localhost" not in base_url:
+        base_url = "https://" + base_url[7:]
 
     return templates.TemplateResponse("link_detail.html", {
         "request": request,
