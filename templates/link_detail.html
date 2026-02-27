@@ -89,16 +89,24 @@
                     {% for scan in scans %}
                     <tr>
                         <td>{{ scan.scanned_at.strftime('%b %d, %H:%M') }}</td>
-                        <td>{{ scan.ip_city or "\u2014" }}</td>
+                        <td>
+                            {% if scan.browser_lat %}
+                                {{ scan.ip_city or "\u2014" }}
+                                <span class="precise-tag">GPS</span>
+                            {% elif scan.ip_city %}
+                                {{ scan.ip_city }}
+                                <span class="ip-tag">IP ~approx</span>
+                            {% else %}
+                                &mdash;
+                            {% endif %}
+                        </td>
                         <td>{{ scan.ip_region or "\u2014" }}</td>
                         <td>{{ scan.ip_country or "\u2014" }}</td>
                         <td>
                             {% if scan.browser_lat %}
                                 {{ "%.4f" | format(scan.browser_lat) }}, {{ "%.4f" | format(scan.browser_lng) }}
-                                <span class="precise-tag">GPS</span>
                             {% elif scan.ip_lat %}
                                 {{ "%.4f" | format(scan.ip_lat) }}, {{ "%.4f" | format(scan.ip_lng) }}
-                                <span class="ip-tag">IP</span>
                             {% else %}
                                 &mdash;
                             {% endif %}

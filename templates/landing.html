@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="/static/icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html { -webkit-font-smoothing: antialiased; }
@@ -24,6 +24,7 @@
         .landing {
             text-align: center;
             padding: 2rem;
+            max-width: 420px;
             animation: fadeIn 0.6s ease-out;
         }
         .pin {
@@ -35,20 +36,65 @@
             animation: float 3s ease-in-out infinite;
         }
         .message {
-            font-size: 1.1rem;
-            color: #918f88;
-            max-width: 360px;
+            font-size: 1.15rem;
+            color: #c4c0b6;
             line-height: 1.7;
         }
+
+        .geo-section {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(37, 45, 63, 0.6);
+        }
+        .share-btn {
+            display: inline-block;
+            background: transparent;
+            color: #d4943f;
+            border: 1.5px solid #d4943f;
+            border-radius: 10px;
+            padding: 0.75rem 1.6rem;
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-weight: 700;
+            font-size: 0.92rem;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .share-btn:hover {
+            background: rgba(212, 148, 63, 0.12);
+            transform: translateY(-1px);
+        }
+        .share-btn:disabled {
+            opacity: 0.6;
+            cursor: default;
+            transform: none;
+        }
+        .share-btn.done {
+            border-color: #4fad6a;
+            color: #4fad6a;
+        }
+        .geo-info {
+            font-size: 0.78rem;
+            color: #5c5b57;
+            margin-top: 0.9rem;
+            line-height: 1.55;
+        }
+        .geo-status {
+            font-size: 0.85rem;
+            color: #918f88;
+            margin-top: 0.6rem;
+            min-height: 1.2em;
+        }
+
         .continue {
             display: inline-block;
-            margin-top: 1.5rem;
+            margin-top: 1.8rem;
             font-size: 0.9rem;
             color: #d4943f;
             text-decoration: none;
             transition: color 0.2s;
         }
         .continue:hover { color: #e8ad5c; }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -63,6 +109,16 @@
     <div class="landing">
         <img src="/static/icon.png" alt="" class="pin">
         <p class="message">{{ link.description or "Thanks for visiting!" }}</p>
+
+        <div class="geo-section">
+            <button id="share-btn" class="share-btn">Share my location</button>
+            <p class="geo-info">
+                Shares your approximate GPS coordinates (~street level) with the link creator.
+                Your IP address and approximate city were already recorded when this page loaded — this happens on every website.
+            </p>
+            <p id="geo-status" class="geo-status"></p>
+        </div>
+
         {% if link.target_url %}
         <a href="{{ link.target_url }}" class="continue">Continue &rarr;</a>
         {% endif %}
@@ -72,7 +128,20 @@
     (function () {
         var scanId = {{ scan_id | tojson }};
         var slug = {{ link.slug | tojson }};
-        if ("geolocation" in navigator) {
+        var shareBtn = document.getElementById("share-btn");
+        var statusEl = document.getElementById("geo-status");
+
+        if (!("geolocation" in navigator)) {
+            shareBtn.disabled = true;
+            shareBtn.textContent = "Not supported";
+            statusEl.textContent = "Your browser doesn't support geolocation.";
+            return;
+        }
+
+        shareBtn.addEventListener("click", function () {
+            shareBtn.disabled = true;
+            shareBtn.textContent = "Locating...";
+
             navigator.geolocation.getCurrentPosition(
                 function (pos) {
                     fetch("/t/" + slug + "/geo", {
@@ -85,11 +154,22 @@
                             accuracy: pos.coords.accuracy
                         })
                     });
+                    shareBtn.textContent = "Location shared";
+                    shareBtn.classList.add("done");
+                    statusEl.textContent = "Thanks! Your approximate coordinates have been recorded.";
                 },
-                function () {},
+                function (err) {
+                    shareBtn.textContent = "Share my location";
+                    shareBtn.disabled = false;
+                    if (err.code === 1) {
+                        statusEl.textContent = "Permission denied — no problem. Your approximate city from your IP is still recorded.";
+                    } else {
+                        statusEl.textContent = "Couldn't get location. Your approximate city from your IP is still recorded.";
+                    }
+                },
                 { enableHighAccuracy: true, timeout: 10000 }
             );
-        }
+        });
     })();
     </script>
 </body>
