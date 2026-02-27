@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flyer Tracker</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        :root { --pico-font-size: 16px; }
+        .badge {
+            display: inline-block;
+            background: #e8e8e8;
+            border-radius: 12px;
+            padding: 2px 10px;
+            font-size: .85rem;
+            font-weight: 600;
+        }
+        .badge-active { background: #d4edda; color: #155724; }
+        .slug-col { font-family: monospace; font-size: .9rem; }
+        form small { display: block; margin-top: -.5rem; margin-bottom: .5rem; color: #777; }
+        #result { margin-top: 1rem; }
+    </style>
+</head>
+<body>
+<main class="container">
+    <h1>Flyer Tracker</h1>
+    <p>Create unique tracking links for each flyer location. Print the QR code, post the flyer, and see where scans come from.</p>
+
+    <details>
+        <summary role="button" class="outline">+ New Tracking Link</summary>
+        <form id="create-form">
+            <label>
+                Slug <small>Short code for the URL — lowercase, numbers, hyphens. Leave blank to auto-generate.</small>
+                <input type="text" name="slug" placeholder="e.g. show-mar15-4th-st" pattern="[a-z0-9\-]*">
+            </label>
+            <label>
+                Target URL <small>Where the QR code should ultimately send people.</small>
+                <input type="url" name="target_url" placeholder="https://ticketsite.com/event" required>
+            </label>
+            <label>
+                Description <small>What this flyer is for.</small>
+                <input type="text" name="description" placeholder="e.g. March 15 show at The Roxy">
+            </label>
+            <label>
+                Posted Location <small>Where you physically posted this specific flyer.</small>
+                <input type="text" name="posted_location" placeholder="e.g. 4th and Main, on the light pole">
+            </label>
+            <button type="submit">Create Link</button>
+        </form>
+        <div id="result" style="display:none"></div>
+    </details>
+
+    <section>
+        <h2>Your Links</h2>
+        {% if links %}
+        <figure>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Slug</th>
+                        <th>Description</th>
+                        <th>Posted Location</th>
+                        <th>Scans</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for link in links %}
+                    <tr>
+                        <td class="slug-col">
+                            <a href="/dashboard/{{ link.slug }}">{{ link.slug }}</a>
+                        </td>
+                        <td>{{ link.description or "—" }}</td>
+                        <td>{{ link.posted_location or "—" }}</td>
+                        <td>
+                            <span class="badge {{ 'badge-active' if scan_counts.get(link.id, 0) > 0 }}">
+                                {{ scan_counts.get(link.id, 0) }}
+                            </span>
+                        </td>
+                        <td>{{ link.created_at.strftime('%b %d, %Y') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </figure>
+        {% else %}
+        <p>No tracking links yet. Create one above to get started!</p>
+        {% endif %}
+    </section>
+</main>
+
+<script>
+    document.getElementById("create-form").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        var form = e.target;
+        var data = Object.fromEntries(new FormData(form));
+        var resultEl = document.getElementById("result");
+
+        var resp = await fetch("/api/links", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+
+        resultEl.style.display = "block";
+
+        if (resp.ok) {
+            var json = await resp.json();
+            var trackingUrl = window.location.origin + json.tracking_url;
+            resultEl.innerHTML =
+                '<article style="background:#d4edda;padding:1rem;border-radius:8px;">' +
+                "<p><strong>Created!</strong> Tracking URL:</p>" +
+                "<p><code>" + trackingUrl + "</code></p>" +
+                "<p>Point a QR code at this URL and post the flyer.</p>" +
+                "</article>";
+            form.reset();
+            setTimeout(function () { location.reload(); }, 2500);
+        } else {
+            var json = await resp.json();
+            resultEl.innerHTML =
+                '<article style="background:#f8d7da;padding:1rem;border-radius:8px;">' +
+                "<p>Error: " + (json.error || "Something went wrong") + "</p>" +
+                "</article>";
+        }
+    });
+</script>
+</body>
+</html>

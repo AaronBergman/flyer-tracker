@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Redirecting…</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #fafafa;
+            color: #333;
+        }
+        .wrap { text-align: center; padding: 2rem; }
+        .spinner {
+            width: 28px; height: 28px;
+            border: 3px solid #e0e0e0;
+            border-top-color: #555;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+            margin: 0 auto 1.2rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        p { font-size: 1rem; margin-bottom: .5rem; }
+        a { color: #888; font-size: .85rem; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="spinner"></div>
+        <p>Redirecting&hellip;</p>
+        <a href="{{ link.target_url }}">Tap here if nothing happens</a>
+    </div>
+
+    <script>
+        (function () {
+            var targetUrl = {{ link.target_url | tojson }};
+            var scanId = {{ scan_id | tojson }};
+            var geoEndpoint = "/t/" + {{ link.slug | tojson }} + "/geo";
+
+            // Try browser geolocation; send via beacon so it survives page nav
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function (pos) {
+                        var payload = JSON.stringify({
+                            scan_id: scanId,
+                            lat: pos.coords.latitude,
+                            lng: pos.coords.longitude,
+                            accuracy: pos.coords.accuracy
+                        });
+                        var blob = new Blob([payload], { type: "application/json" });
+                        navigator.sendBeacon(geoEndpoint, blob);
+                    },
+                    function () { /* denied or error — that's fine */ },
+                    { timeout: 4000, maximumAge: 60000 }
+                );
+            }
+
+            // Redirect after a short pause (enough for geo to fire if allowed)
+            setTimeout(function () {
+                window.location.href = targetUrl;
+            }, 1500);
+        })();
+    </script>
+</body>
+</html>
