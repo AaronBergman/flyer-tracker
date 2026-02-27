@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ link.slug }} — Flyer Tracker</title>
+    <title>{{ link.slug }} — Link Tracker</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9/dist/leaflet.css">
     <style>
@@ -15,27 +15,17 @@
         .stat .label { font-size: .85rem; color: #777; }
         .meta { margin-bottom: 1.5rem; font-size: .95rem; color: #555; }
         .meta strong { color: #333; }
-        .qr-section { text-align: center; margin: 1.5rem 0; }
-        .qr-section img { border-radius: 8px; }
         .actions { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0; }
         .actions a, .actions button { font-size: .9rem; }
         .precise-tag {
-            display: inline-block;
-            font-size: .7rem;
-            background: #d4edda;
-            color: #155724;
-            border-radius: 4px;
-            padding: 1px 5px;
-            vertical-align: middle;
+            display: inline-block; font-size: .7rem;
+            background: #d4edda; color: #155724;
+            border-radius: 4px; padding: 1px 5px; vertical-align: middle;
         }
         .ip-tag {
-            display: inline-block;
-            font-size: .7rem;
-            background: #d1ecf1;
-            color: #0c5460;
-            border-radius: 4px;
-            padding: 1px 5px;
-            vertical-align: middle;
+            display: inline-block; font-size: .7rem;
+            background: #d1ecf1; color: #0c5460;
+            border-radius: 4px; padding: 1px 5px; vertical-align: middle;
         }
     </style>
 </head>
@@ -47,18 +37,7 @@
 
     <div class="meta">
         {% if link.description %}<p><strong>Description:</strong> {{ link.description }}</p>{% endif %}
-        <p><strong>Target:</strong> <a href="{{ link.target_url }}">{{ link.target_url }}</a></p>
-        {% if link.posted_location %}<p><strong>Posted at:</strong> {{ link.posted_location }}</p>{% endif %}
         <p><strong>Tracking URL:</strong> <code>{{ base_url }}/t/{{ link.slug }}</code></p>
-    </div>
-
-    <div class="qr-section">
-        <p><strong>QR Code</strong> (right-click to save)</p>
-        <img
-            src="https://api.qrserver.com/v1/create-qr-code/?data={{ base_url | urlencode }}/t/{{ link.slug }}&size=200x200&margin=8"
-            alt="QR code for {{ link.slug }}"
-            width="200" height="200"
-        >
     </div>
 
     <div class="stats">
@@ -130,7 +109,7 @@
     </div>
     </figure>
     {% else %}
-    <p>No scans yet. Post the QR code and wait for scans to roll in!</p>
+    <p>No scans yet.</p>
     <div class="actions">
         <button class="outline secondary" id="delete-btn">Delete Link</button>
     </div>

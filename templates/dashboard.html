@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Flyer Tracker</title>
+    <title>Link Tracker</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <style>
         :root { --pico-font-size: 16px; }
@@ -23,27 +23,19 @@
 </head>
 <body>
 <main class="container">
-    <h1>Flyer Tracker</h1>
-    <p>Create unique tracking links for each flyer location. Print the QR code, post the flyer, and see where scans come from.</p>
+    <h1>Link Tracker</h1>
+    <p>Create tracking links. When someone visits <code>/t/your-slug</code>, their location and time are logged.</p>
 
     <details>
         <summary role="button" class="outline">+ New Tracking Link</summary>
         <form id="create-form">
             <label>
-                Slug <small>Short code for the URL — lowercase, numbers, hyphens. Leave blank to auto-generate.</small>
-                <input type="text" name="slug" placeholder="e.g. show-mar15-4th-st" pattern="[a-z0-9\-]*">
+                Slug <small>Short code for the URL. Leave blank to auto-generate.</small>
+                <input type="text" name="slug" placeholder="e.g. test1" pattern="[a-z0-9\-]*">
             </label>
             <label>
-                Target URL <small>Where the QR code should ultimately send people.</small>
-                <input type="url" name="target_url" placeholder="https://ticketsite.com/event" required>
-            </label>
-            <label>
-                Description <small>What this flyer is for.</small>
-                <input type="text" name="description" placeholder="e.g. March 15 show at The Roxy">
-            </label>
-            <label>
-                Posted Location <small>Where you physically posted this specific flyer.</small>
-                <input type="text" name="posted_location" placeholder="e.g. 4th and Main, on the light pole">
+                Description <small>Optional note about this link.</small>
+                <input type="text" name="description" placeholder="e.g. posted on 4th and Main">
             </label>
             <button type="submit">Create Link</button>
         </form>
@@ -59,7 +51,6 @@
                     <tr>
                         <th>Slug</th>
                         <th>Description</th>
-                        <th>Posted Location</th>
                         <th>Scans</th>
                         <th>Created</th>
                     </tr>
@@ -71,7 +62,6 @@
                             <a href="/dashboard/{{ link.slug }}">{{ link.slug }}</a>
                         </td>
                         <td>{{ link.description or "—" }}</td>
-                        <td>{{ link.posted_location or "—" }}</td>
                         <td>
                             <span class="badge {{ 'badge-active' if scan_counts.get(link.id, 0) > 0 }}">
                                 {{ scan_counts.get(link.id, 0) }}
@@ -111,10 +101,9 @@
                 '<article style="background:#d4edda;padding:1rem;border-radius:8px;">' +
                 "<p><strong>Created!</strong> Tracking URL:</p>" +
                 "<p><code>" + trackingUrl + "</code></p>" +
-                "<p>Point a QR code at this URL and post the flyer.</p>" +
                 "</article>";
             form.reset();
-            setTimeout(function () { location.reload(); }, 2500);
+            setTimeout(function () { location.reload(); }, 2000);
         } else {
             var json = await resp.json();
             resultEl.innerHTML =

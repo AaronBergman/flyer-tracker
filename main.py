@@ -55,7 +55,7 @@ class Link(Base):
 
     id = Column(Integer, primary_key=True)
     slug = Column(String(100), unique=True, nullable=False, index=True)
-    target_url = Column(Text, nullable=False)
+    target_url = Column(Text, default="")
     description = Column(Text, default="")
     posted_location = Column(String(500), default="")  # physical location of the flyer
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
@@ -114,7 +114,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Flyer Tracker", lifespan=lifespan)
+app = FastAPI(title="Link Tracker", lifespan=lifespan)
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
 
 
@@ -368,15 +368,12 @@ async def create_link(request: Request, db: Session = Depends(get_db)):
     description = data.get("description", "").strip()
     posted_location = data.get("posted_location", "").strip()
 
-    if not target_url:
-        return JSONResponse({"error": "target_url is required"}, status_code=400)
-
     # Auto-generate slug if not provided
     if not slug:
         slug = generate_slug()
 
-    # Ensure target_url has a protocol
-    if not target_url.startswith(("http://", "https://")):
+    # Ensure target_url has a protocol (if provided)
+    if target_url and not target_url.startswith(("http://", "https://")):
         target_url = "https://" + target_url
 
     # Check for duplicate slug
