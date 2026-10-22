@@ -264,7 +264,7 @@ async def track_scan(slug: str, request: Request, db: Session = Depends(get_db))
     db.refresh(scan)
 
     # Return a brief landing page that tries browser geo then redirects
-    return templates.TemplateResponse("landing.html", {
+    return templates.TemplateResponse(request, "landing.html", {
         "request": request,
         "link": link,
         "scan_id": scan.id,
@@ -341,7 +341,7 @@ async def _dashboard_inner(request: Request, db: Session):
     if base_url.startswith("http://") and "localhost" not in base_url:
         base_url = "https://" + base_url[7:]
 
-    return templates.TemplateResponse("dashboard.html", {
+    return templates.TemplateResponse(request, "dashboard.html", {
         "request": request,
         "links": links,
         "scan_counts": scan_counts,
@@ -387,7 +387,7 @@ async def link_detail(slug: str, request: Request, db: Session = Depends(get_db)
     if base_url.startswith("http://") and "localhost" not in base_url:
         base_url = "https://" + base_url[7:]
 
-    return templates.TemplateResponse("link_detail.html", {
+    return templates.TemplateResponse(request, "link_detail.html", {
         "request": request,
         "link": link,
         "scans": scans,
